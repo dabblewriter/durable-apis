@@ -30,6 +30,7 @@ import { Env } from './types'
 
 export const Counter = createDurable(({ blockConcurrencyWhile, storage }: DurableObjectState, env: Env): CounterAPI => {
   let counter = 0
+  let connections = new Set<WebSocket>()
   blockConcurrencyWhile(async () => conuter = (await storage.get('data')) || 0)
 
   // Will return the current value of counter
@@ -48,9 +49,25 @@ export const Counter = createDurable(({ blockConcurrencyWhile, storage }: Durabl
     return a + b
   }
 
+  // OPTIONAL: Handle any requests not handled by the API (avoid naming this `fetch` so we can still use the global
+  // `fetch` method in our durable)
+  function handleFetch(request: Request) {
+    if (request.headers.get('Upgrade') === 'websocket') {
+      const [ client, server ] = Object.values(new WebSocketPair())
+      connections.add(server)
+      server.addEventListener('close', () => connections.delete(server))
+      server.addEventListener('message', ({ data }) => connections.forEach(conn => conn.send(data)))
+
+      return new Response(null, {
+        status: 101,
+        webSocket: client,
+      });
+    }
+  }
+
   // Only public-facing API will be exposed for calling from Workers
   // Adding a fetch method will catch any requests not handled by the API, allowing for Websocket request handling, etc.
-  return { get, increment, add }
+  return { get, increment, add, fetch: handleFetch }
 }
 ```
 
