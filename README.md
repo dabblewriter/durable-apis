@@ -61,7 +61,7 @@ export const Counter = createDurable(({ blockConcurrencyWhile, storage }: Durabl
       return new Response(null, {
         status: 101,
         webSocket: client,
-      });
+      })
     }
   }
 
@@ -73,9 +73,9 @@ export const Counter = createDurable(({ blockConcurrencyWhile, storage }: Durabl
 
 ##### Worker.js (your CF Worker function)
 ```js
-import { ThrowableRouter, missing } from 'itty-router-extras'
+import { ThrowableRouter, missing, StatusError } from 'itty-router-extras'
 import { withDurables } from 'durable-apis'
-import { Env } from './types';
+import { Env } from './types'
 
 // export the durable class, per spec
 export { Counter } from './Counter'
@@ -89,13 +89,21 @@ router
   // get the durable value...
   .get('/', (req: Request, { Counter }: Env) => Counter.get('test').get())
 
-  // By using { autoReturn: true } in createDurable(), this method returns the contents
+  // returns the value from the method
   .get('/increment', (req: Request, { Counter }: Env) => Counter.get('test').increment())
 
   // you can pass any serializable params to a method... (e.g. /counter/add/3/4 => 7)
   .get('/add/:a?/:b?',
     ({ params: { a, b }}: Request, { Counter }: Env) => Counter.get('test').add(Number(a), Number(b))
   )
+
+  // use fetch like normal when direct APIs aren't enough, such as when handling a websocket upgrade
+  .get('/ws', (req: Request, { Counter }: Env) => {
+    if (request.headers.get('Upgrade') !== 'websocket') {
+      throw new StatusError(426, 'Expected Upgrade: websocket')
+    }
+    return Counter.get('test').fetch(req)
+  })
 
   // 404 for everything else
   .all('*', () => missing('Are you sure about that?'))
