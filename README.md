@@ -1,12 +1,12 @@
 # durable-apis
 
-Simplifies usage of [Cloudflare Durable Objects](https://blog.cloudflare.com/introducing-workers-durable-objects/), allowing a **functional programming style**, **lightweight object definitions**, and **direct access** to object methods from within Workers (no need for request building/handling). Heavily influenced by and loosely forked from https://github.com/kwhitley/itty-durable/.
+Simplifies usage of [Cloudflare Durable Objects](https://blog.cloudflare.com/introducing-workers-durable-objects/), allowing a **functional programming style** *or* **class style**, **lightweight object definitions**, and **direct access** to object methods from within Workers (no need for request building/handling). Heavily influenced by and loosely forked from https://github.com/kwhitley/itty-durable/.
 
 ## Features
 - Removes nearly all boilerplate from writing **and** using Durable Objects
 - Exposes only desired APIs to be called from outside
 - First class Typescript support
-- Allows a functional programming style in contrast to the object oriented style of Durable Objects
+- Allows a functional programming style in addition to the object oriented style of Durable Objects
 - Extends existing APIs rather than replacing them
 
 ## Example
@@ -28,13 +28,14 @@ export interface Env {
 import { createDurable } from 'durable-apis'
 import { Env } from './types'
 
+// Functional style, pass in a function that returns an object with callable API methods
 export const Counter = createDurable(({ blockConcurrencyWhile, storage }: DurableObjectState, env: Env): CounterAPI => {
   let counter = 0
   let connections = new Set<WebSocket>()
   blockConcurrencyWhile(async () => conuter = (await storage.get('data')) || 0)
 
   // Will return the current value of counter
-  async function get() {
+  function get() {
     return counter
   }
 
@@ -122,6 +123,61 @@ GET /counter/increment                      => 2
 GET /counter/increment                      => 3
 GET /counter/add/20/3                       => 23
 */
+```
+
+##### Alternative class-style Counter.ts (your Durable Object Class)
+```ts
+import { createDurable } from 'durable-apis'
+import { Env } from './types'
+
+// If you prefer the Class style, use a class like you normally would, wrapping it in our durable handler.
+// Note: all class methods are callable remotely using this method.
+export const Counter = createDurable(class Counter {
+  state: DurableObjectState
+  env: Env
+  counter: number
+  connections: Set<WebSocket>
+
+  constructor(state: DurableObjectState, env: Env): CounterAPI => {
+    this.state = state
+    this.env = env
+    this.counter = 0
+    this.connections = new Set()
+    state.blockConcurrencyWhile(async () => conuter = (await state.storage.get('data')) || 0)
+  }
+
+  // Will return the current value of counter
+  get() {
+    return this.counter
+  }
+
+  // Will return the current value of counter
+  increment() {
+    this.state.storage.put('data', ++this.counter)
+    return this.counter
+  }
+
+  // Note that any serializable params can passed through from the Worker without issue.
+  add(a: number, b: number) {
+    return a + b
+  }
+
+  // OPTIONAL: Handle any requests not handled by the API (avoid naming this `fetch` so we can still use the global
+  // `fetch` method in our durable)
+  fetch(request: Request) {
+    if (request.headers.get('Upgrade') === 'websocket') {
+      const [ client, server ] = Object.values(new WebSocketPair())
+      this.connections.add(server)
+      server.addEventListener('close', () => this.connections.delete(server))
+      server.addEventListener('message', ({ data }) => this.connections.forEach(conn => conn.send(data)))
+
+      return new Response(null, {
+        status: 101,
+        webSocket: client,
+      })
+    }
+  }
+})
 ```
 
 ## How it Works

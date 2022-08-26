@@ -9,7 +9,12 @@ import {
 type EmptyObj = {[key: string]: any};
 const URL = 'https://durable/';
 
-export type DurableInit<Env = EmptyObj, T extends DurableObjectAPI = DurableObjectAPI> = (state: DurableObjectState, env: Env) => T;
+type Object = Record<string, any>;
+type DurableInitConstructor<Env, T> = {new (state: DurableObjectState, env: Env): T};
+type DurableInitFunction<Env, T> = (state: DurableObjectState, env: Env) => T;
+
+export type DurableInit<Env = EmptyObj, T extends Object = Object> =
+  DurableInitConstructor<Env, T> | DurableInitFunction<Env, T>;
 
 /**
  * createDurable creates a new Durable Object with a public API that can be called directly from a Worker or another
@@ -50,10 +55,10 @@ export type DurableInit<Env = EmptyObj, T extends DurableObjectAPI = DurableObje
  * }
  * ```
  */
-export function createDurable<Env = EmptyObj, T extends DurableObjectAPI = DurableObjectAPI>(durable: DurableInit<Env, T>): BasicDurable<Env> {
+export function createDurable<Env = EmptyObj, T extends Object = Object>(durable: DurableInit<Env, T>): BasicDurable<Env> {
   return (state: DurableObjectState, env: Env) => {
     extendEnv(env);
-    const api = durable(state, env);
+    const api = (durable as DurableInitFunction<Env, T>)(state, env);
     const router = Router().post('/:prop', withContent, async (request: Request) => {
       const { prop } = (request as any).params as {prop: keyof T};
       const { content } = request as any;
@@ -68,7 +73,7 @@ export function createDurable<Env = EmptyObj, T extends DurableObjectAPI = Durab
     return {
       fetch: (request: Request) => request.url.startsWith(URL)
         ? router.handle(request).catch(err => error(err.status || 500, err.message))
-        : (api as unknown as DurableObjectAPIWithFetch).fetch?.(request) || error(500, 'Durable Object cannot handle request')
+        : api.fetch?.(request) || error(500, 'Durable Object cannot handle request')
     }
   }
 }
@@ -88,14 +93,6 @@ export function extendEnv(env: EmptyObj) {
 
 export interface DurableObjectNamespaceExt<T = DurableObjectStub> extends DurableObjectNamespace {
   get(id?: string | DurableObjectId): DurableObjectStub & PromisifiedObject<T>;
-}
-
-export interface DurableObjectAPI {
-  [key: string]: (...args: any[]) => any;
-}
-
-export interface DurableObjectAPIWithFetch extends DurableObjectAPI {
-  fetch: (request: Request) => Response;
 }
 
 function extendNamespace(namespace: DurableObjectNamespace) {
@@ -152,5 +149,11 @@ type PromisifiedObject<T> = {
     ? T[K]
     : T[K] extends (...args: infer A) => any
     ? (...args: A) => Promise<ReturnType<T[K]>>
+    : never;
+}
+
+type Callable<T> = {
+  [K in keyof T]: T[K] extends (...args: any) => any
+    ? T[K]
     : never;
 }
