@@ -1,15 +1,5 @@
 # durable-apis
 
-[![npm package][npm-image]][npm-url]
-![Build Status](https://github.com/dabblewriter/durable-apis/actions/workflows/verify.yml/badge.svg)
-[![Open Issues][issues-image]][issues-url]
-<a href="https://github.com/dabblewriter/durable-apis" target="\_parent">
-  <img alt="" src="https://img.shields.io/github/stars/dabblewriter/durable-apis.svg?style=social&label=Star" />
-</a>
-<a href="https://twitter.com/jac_" target="\_parent">
-  <img alt="" src="https://img.shields.io/twitter/follow/jac_.svg?style=social&label=Follow" />
-</a>
-
 Simplifies usage of [Cloudflare Durable Objects](https://blog.cloudflare.com/introducing-workers-durable-objects/), allowing a **functional programming style**, **lightweight object definitions**, and **direct access** to object methods from within Workers (no need for request building/handling). Heavily influenced by and loosely forked from https://github.com/kwhitley/itty-durable/.
 
 ## Features
