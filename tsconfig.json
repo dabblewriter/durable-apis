@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "es2021",
+    "outDir": "dist",
+    "declaration": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
+    "lib": [
+      "es2021"
+    ],
+    "resolveJsonModule": true,
+    "types": [
+      "@cloudflare/workers-types"
+    ]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["src/__getToken.ts"]
+}

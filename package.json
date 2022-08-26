@@ -1,0 +1,34 @@
+{
+  "name": "durable-apis",
+  "version": "0.0.1",
+  "description": "Functional-style Cloudflare Durable Objects with direct API calls from Cloudflare Workers and TypeScript support.",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dabblewriter/durable-apis.git"
+  },
+  "keywords": [
+    "Durable Objects",
+    "Cloudflare",
+    "functional",
+    "workers",
+    "typescript"
+  ],
+  "author": "Jacob Wright",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dabblewriter/durable-apis/issues"
+  },
+  "homepage": "https://github.com/dabblewriter/durable-apis#readme",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^3.14.1",
+    "@types/itty-router-extras": "^0.4.0"
+  },
+  "dependencies": {
+    "itty-router": "^2.6.1",
+    "itty-router-extras": "^0.4.2"
+  }
+}
