@@ -1,12 +1,12 @@
 {
   "name": "durable-apis",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Functional-style Cloudflare Durable Objects with direct API calls from Cloudflare Workers and TypeScript support.",
-  "main": "dist/index.js",
-  "types": "dist/index.js",
+  "main": "dist/durable-apis.js",
+  "types": "dist/durable-apis.d.ts",
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "prepare": "npm run build"
   },
   "repository": {
     "type": "git",
