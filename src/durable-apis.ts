@@ -67,7 +67,7 @@ export function createDurable<Env = EmptyObj, T extends Object = Object>(durable
         throw new StatusError(500, `Durable Object does not contain method ${prop as string}()`)
       }
       const response = await (prop === 'fetch' ? api[prop](request) : api[prop](...content));
-      return response instanceof Response ? response : (response ? json(response) : new Response())
+      return response instanceof Response ? response : createResponse(response);
     });
 
     return {
@@ -129,6 +129,14 @@ function createRequest(prop: string, content: any) {
     },
     body: JSON.stringify(content)
   });
+}
+
+function createResponse(data: any) {
+  try {
+    return json(data);
+  } catch(err) {
+    return new Response(data);
+  }
 }
 
 function transformResponse(response: Response) {
