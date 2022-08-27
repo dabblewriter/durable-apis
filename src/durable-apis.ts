@@ -139,12 +139,13 @@ function createResponse(data: any) {
   }
 }
 
-function transformResponse(response: Response) {
+async function transformResponse(response: Response) {
   try {
-    return response.json();
-  } catch (err) {}
-  try {
-    return response.text();
+    const text = await response.text();
+    try {
+      return JSON.parse(text);
+    } catch (err) {}
+    return text;
   } catch (err) {}
   return response;
 }
