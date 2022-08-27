@@ -56,7 +56,7 @@ export type DurableInit<Env = EmptyObj, T extends Object = Object> =
  * ```
  */
 export function createDurable<Env = EmptyObj, T extends Object = Object>(durable: DurableInit<Env, T>): BasicDurable<Env> {
-  return (state: DurableObjectState, env: Env) => {
+  return function(state: DurableObjectState, env: Env) {
     extendEnv(env);
     const api = (durable as DurableInitFunction<Env, T>)(state, env);
     const router = Router().post('/:prop', withContent, async (request: Request) => {

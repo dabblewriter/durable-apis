@@ -32,7 +32,7 @@ import { Env } from './types'
 export const Counter = createDurable(({ blockConcurrencyWhile, storage }: DurableObjectState, env: Env): CounterAPI => {
   let counter = 0
   let connections = new Set<WebSocket>()
-  blockConcurrencyWhile(async () => conuter = (await storage.get('data')) || 0)
+  blockConcurrencyWhile(async () => counter = (await storage.get('data')) || 0)
 
   // Will return the current value of counter
   function get() {
@@ -69,7 +69,7 @@ export const Counter = createDurable(({ blockConcurrencyWhile, storage }: Durabl
   // Only public-facing API will be exposed for calling from Workers
   // Adding a fetch method will catch any requests not handled by the API, allowing for Websocket request handling, etc.
   return { get, increment, add, fetch: handleFetch }
-}
+})
 ```
 
 ##### Worker.js (your CF Worker function)
@@ -143,7 +143,7 @@ export const Counter = createDurable(class Counter {
     this.env = env
     this.counter = 0
     this.connections = new Set()
-    state.blockConcurrencyWhile(async () => conuter = (await state.storage.get('data')) || 0)
+    state.blockConcurrencyWhile(async () => counter = (await state.storage.get('data')) || 0)
   }
 
   // Will return the current value of counter
