@@ -106,7 +106,10 @@ function extendNamespace(namespace: DurableObjectNamespace) {
 
     const stub = get(id);
     return new Proxy(stub, {
-      get: (obj, prop: string) => prop in obj
+      // special case for fetch because of breaking behavior
+      get: (obj, prop: string) => prop === 'fetch'
+        ? (...args: any[]) => obj.fetch(...args)
+        : prop in obj
         ? obj[prop as keyof DurableObjectStub]
         : (...args: any[]) => stubFetch(obj, prop, args),
     })
