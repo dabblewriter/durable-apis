@@ -55,6 +55,7 @@ export const Counter = createDurable(({ blockConcurrencyWhile, storage }: Durabl
   function handleFetch(request: Request) {
     if (request.headers.get('Upgrade') === 'websocket') {
       const [ client, server ] = Object.values(new WebSocketPair())
+      server.accept()
       connections.add(server)
       server.addEventListener('close', () => connections.delete(server))
       server.addEventListener('message', ({ data }) => connections.forEach(conn => conn.send(data)))
@@ -64,6 +65,7 @@ export const Counter = createDurable(({ blockConcurrencyWhile, storage }: Durabl
         webSocket: client,
       })
     }
+    return new Response(null)
   }
 
   // Only public-facing API will be exposed for calling from Workers
@@ -167,6 +169,7 @@ export const Counter = createDurable(class Counter {
   fetch(request: Request) {
     if (request.headers.get('Upgrade') === 'websocket') {
       const [ client, server ] = Object.values(new WebSocketPair())
+      server.accept()
       this.connections.add(server)
       server.addEventListener('close', () => this.connections.delete(server))
       server.addEventListener('message', ({ data }) => this.connections.forEach(conn => conn.send(data)))
@@ -176,6 +179,7 @@ export const Counter = createDurable(class Counter {
         webSocket: client,
       })
     }
+    return new Response(null)
   }
 })
 ```
