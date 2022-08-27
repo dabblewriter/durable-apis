@@ -149,11 +149,5 @@ type PromisifiedObject<T> = {
     ? T[K]
     : T[K] extends (...args: infer A) => any
     ? (...args: A) => Promise<ReturnType<T[K]>>
-    : never;
-}
-
-type Callable<T> = {
-  [K in keyof T]: T[K] extends (...args: any) => any
-    ? T[K]
-    : never;
+    : T[K];
 }
