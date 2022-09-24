@@ -10,8 +10,25 @@ type EmptyObj = {[key: string]: any};
 const URL = 'https://durable/';
 
 type Object = Record<string, any>;
-type DurableInitConstructor<Env, T> = {new (state: DurableObjectState, env: Env): T};
-type DurableInitFunction<Env, T> = (state: DurableObjectState, env: Env) => T;
+export type DurableInitConstructor<Env, T> = {new (state: DurableObjectState, env: Env): T};
+export type DurableInitFunction<Env, T> = (state: DurableObjectState, env: Env) => T;
+
+interface BasicDurable<Env = EmptyObj> {
+  (state: DurableObjectState, env: Env): {
+    fetch: (request: Request) => Response | Promise<Response>;
+  };
+}
+
+type PromisifiedObject<T> = {
+  [K in keyof T]: T[K] extends (...args: any) => Promise<any>
+    ? T[K]
+    : T[K] extends (...args: infer A) => any
+    ? (...args: A) => Promise<ReturnType<T[K]>>
+    : T[K];
+}
+
+export type DurableAPIStub<T> = DurableObjectStub & PromisifiedObject<T>;
+
 
 export type DurableInit<Env = EmptyObj, T extends Object = Object> =
   DurableInitConstructor<Env, T> | DurableInitFunction<Env, T>;
@@ -92,7 +109,7 @@ export function extendEnv(env: EmptyObj) {
 }
 
 export interface DurableObjectNamespaceExt<T = DurableObjectStub> extends DurableObjectNamespace {
-  get(id?: string | DurableObjectId): DurableObjectStub & PromisifiedObject<T>;
+  get(id?: string | DurableObjectId): DurableAPIStub<T>;
 }
 
 function extendNamespace(namespace: DurableObjectNamespace) {
@@ -148,18 +165,4 @@ async function transformResponse(response: Response) {
     return text;
   } catch (err) {}
   return response;
-}
-
-interface BasicDurable<Env = EmptyObj> {
-  (state: DurableObjectState, env: Env): {
-    fetch: (request: Request) => Response | Promise<Response>;
-  };
-}
-
-type PromisifiedObject<T> = {
-  [K in keyof T]: T[K] extends (...args: any) => Promise<any>
-    ? T[K]
-    : T[K] extends (...args: infer A) => any
-    ? (...args: A) => Promise<ReturnType<T[K]>>
-    : T[K];
 }
