@@ -6,20 +6,20 @@ import {
   withContent,
 } from 'itty-router-extras';
 
-type EmptyObj = {[key: string]: any};
+export type EmptyObj = {[key: string]: any};
 const URL = 'https://durable/';
 
-type Object = Record<string, any>;
+export type Object = Record<string, any>;
 export type DurableInitConstructor<Env, T> = {new (state: DurableObjectState, env: Env): T};
 export type DurableInitFunction<Env, T> = (state: DurableObjectState, env: Env) => T;
 
-interface BasicDurable<Env = EmptyObj> {
+export interface BasicDurable<Env = EmptyObj> {
   (state: DurableObjectState, env: Env): {
     fetch: (request: Request) => Response | Promise<Response>;
   };
 }
 
-type PromisifiedObject<T> = {
+export type PromisifiedObject<T> = {
   [K in keyof T]: T[K] extends (...args: any) => Promise<any>
     ? T[K]
     : T[K] extends (...args: infer A) => any
