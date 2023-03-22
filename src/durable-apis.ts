@@ -1,4 +1,4 @@
-import { Router } from 'itty-router';
+import { IRequest, Router } from 'itty-router';
 import {
   error,
   json,
@@ -76,9 +76,9 @@ export function createDurable<Env = EmptyObj, T extends Object = Object>(durable
   return function(state: DurableObjectState, env: Env) {
     extendEnv(env);
     const api = (durable as DurableInitFunction<Env, T>)(state, env);
-    const router = Router().post('/:prop', withContent, async (request: Request) => {
-      const { prop } = (request as any).params as {prop: keyof T};
-      const { content } = request as any;
+    const router = Router().post('/:prop', withContent as any, async (request: IRequest) => {
+      const { prop } = request.params as {prop: keyof T};
+      const { content } = request;
 
       if (typeof api[prop] !== 'function') {
         throw new StatusError(500, `Durable Object does not contain method ${prop as string}()`)
@@ -108,20 +108,23 @@ export function extendEnv(env: EmptyObj) {
   return env;
 }
 
+export type LocationHint = 'wnam' | 'enam' | 'sam' | 'weur' | 'eeur' | 'apac' | 'oc' | 'afr' | 'me';
+export type DurableObjectGetOptions = { locationHint?: LocationHint };
+
 export interface DurableObjectNamespaceExt<T = DurableObjectStub> extends DurableObjectNamespace {
-  get(id?: string | DurableObjectId): DurableAPIStub<T>;
+  get(id?: string | DurableObjectId, options?: DurableObjectGetOptions): DurableAPIStub<T>;
 }
 
 function extendNamespace(namespace: DurableObjectNamespace) {
   const get = namespace.get.bind(namespace);
-  namespace.get = (id?: string | DurableObjectId) => {
+  namespace.get = (id?: string | DurableObjectId, options?: any) => {
     if (!id) {
       id = namespace.newUniqueId();
     } else if (typeof id === 'string') {
       id = id.length === 64 ? namespace.idFromString(id) : namespace.idFromName(id);
     }
 
-    const stub = get(id);
+    const stub = get(id, options);
     return new Proxy(stub, {
       // special case for fetch because of breaking behavior
       get: (obj, prop: string) => prop === 'fetch'

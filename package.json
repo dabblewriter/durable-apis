@@ -1,6 +1,6 @@
 {
   "name": "durable-apis",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Functional-style Cloudflare Durable Objects with direct API calls from Cloudflare Workers and TypeScript support.",
   "main": "dist/durable-apis.js",
   "types": "dist/durable-apis.d.ts",
@@ -26,12 +26,12 @@
   },
   "homepage": "https://github.com/dabblewriter/durable-apis#readme",
   "devDependencies": {
-    "@cloudflare/workers-types": "^3.14.1",
+    "@cloudflare/workers-types": "^4.20230321.0",
     "@types/itty-router-extras": "^0.4.0"
   },
   "dependencies": {
-    "itty-router": "^2.6.1",
+    "itty-router": "^3.0.12",
     "itty-router-extras": "^0.4.2",
-    "typescript": "^4.8.2"
+    "typescript": "^5.0.2"
   }
 }
