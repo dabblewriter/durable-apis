@@ -8,6 +8,7 @@ import {
 
 export type EmptyObj = {[key: string]: any};
 const URL = 'https://durable/';
+const maxRetries = 10;
 
 export type Object = Record<string, any>;
 export type DurableInitConstructor<Env, T> = {new (state: DurableObjectState, env: Env): T};
@@ -137,8 +138,14 @@ function extendNamespace(namespace: DurableObjectNamespace) {
   return namespace;
 }
 
-async function stubFetch(obj: DurableObjectStub, prop: string, content: any) {
-  return obj.fetch(createRequest(prop, content)).then(transformResponse)
+async function stubFetch(obj: DurableObjectStub, prop: string, content: any, retries = 0) {
+  return obj.fetch(createRequest(prop, content)).then(transformResponse).catch(err => {
+    if (!shouldRetry(err, retries)) return Promise.reject(err);
+    // Retry up to 11 times over 30 seconds with exponential backoff. 20ms, 40ms, etc
+    return new Promise(resolve => setTimeout(resolve, Math.pow(2, retries) * 10)).then(() => {
+      return stubFetch(obj, prop, content, retries + 1);
+    });
+  });
 }
 
 function createRequest(prop: string, content: any) {
@@ -168,4 +175,12 @@ async function transformResponse(response: Response) {
     return text;
   } catch (err) {}
   return response;
+}
+
+function shouldRetry(err: any, retries: number) {
+  if (retries > maxRetries) return false;
+  err = err + '';
+  if (err.includes('Network connection lost.')) return true;
+  if (err.includes('Cannot resolve Durable Object due to transient issue on remote node.')) return true;
+  return false;
 }
