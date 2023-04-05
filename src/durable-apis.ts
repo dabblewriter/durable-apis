@@ -126,7 +126,10 @@ export interface DurableObjectNamespaceExt<T = DurableObjectStub> extends Durabl
 }
 
 function extendNamespace<T = DurableObjectStub>(namespace: DurableObjectNamespace) {
-  namespace.get = getDurableGet(namespace);
+  if (!(namespace.get as any).extended) {
+    namespace.get = getDurableGet(namespace);
+    (namespace.get as any).extended = true;
+  }
   return namespace as DurableObjectNamespaceExt<T>;
 }
 
@@ -140,13 +143,16 @@ function getDurableGet<T = DurableObjectStub>(namespace: DurableObjectNamespace)
     }
 
     const stub = get.call(namespace, id, options);
+    const methods: { [name: string]: (...args: any[]) => any } = {
+      fetch: (...args: any[]) => stub.fetch(...args),
+    };
     return new Proxy(stub, {
       // special case for fetch because of breaking behavior
-      get: (_, prop: string) => prop === 'fetch'
-        ? stub.fetch
-        : prop in stub
-        ? stub[prop as keyof DurableObjectStub]
-        : (stub[prop] = (...args: any[]) => stubFetch(stub, prop, args)),
+      get: (obj, prop: string) => prop in methods
+        ? methods[prop]
+        : prop in obj
+        ? obj[prop]
+        : (methods[prop] = (...args: any[]) => stubFetch(obj, prop, args)),
     }) as DurableAPIStub<T>;
   };
 }
