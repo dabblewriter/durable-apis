@@ -9,6 +9,11 @@ import {
 export type EmptyObj = {[key: string]: any};
 const URL = 'https://durable/';
 const maxRetries = 10;
+const retryOn = new RegExp([
+  'Network connection lost',
+  'Cannot resolve Durable Object due to transient issue on remote node',
+  'Durable Object reset because its code was updated',
+].join('|'));
 
 export type Object = Record<string, any>;
 export type DurableInitConstructor<Env, T> = {new (state: DurableObjectState, env: Env): T};
@@ -109,6 +114,10 @@ export function extendEnv(env: EmptyObj) {
   return env;
 }
 
+export function getDurable<T = DurableObjectStub>(namespace: DurableObjectNamespace, id?: string | DurableObjectId, options?: any) {
+  return getDurableGet<T>(namespace)(id, options);
+}
+
 export type LocationHint = 'wnam' | 'enam' | 'sam' | 'weur' | 'eeur' | 'apac' | 'oc' | 'afr' | 'me';
 export type DurableObjectGetOptions = { locationHint?: LocationHint };
 
@@ -116,26 +125,30 @@ export interface DurableObjectNamespaceExt<T = DurableObjectStub> extends Durabl
   get(id?: string | DurableObjectId, options?: DurableObjectGetOptions): DurableAPIStub<T>;
 }
 
-function extendNamespace(namespace: DurableObjectNamespace) {
-  const get = namespace.get.bind(namespace);
-  namespace.get = (id?: string | DurableObjectId, options?: any) => {
+function extendNamespace<T = DurableObjectStub>(namespace: DurableObjectNamespace) {
+  namespace.get = getDurableGet(namespace);
+  return namespace as DurableObjectNamespaceExt<T>;
+}
+
+function getDurableGet<T = DurableObjectStub>(namespace: DurableObjectNamespace) {
+  const get = namespace.get;
+  return (id?: string | DurableObjectId, options?: any) => {
     if (!id) {
       id = namespace.newUniqueId();
     } else if (typeof id === 'string') {
       id = id.length === 64 ? namespace.idFromString(id) : namespace.idFromName(id);
     }
 
-    const stub = get(id, options);
+    const stub = get.call(namespace, id, options);
     return new Proxy(stub, {
       // special case for fetch because of breaking behavior
-      get: (obj, prop: string) => prop === 'fetch'
-        ? (...args: any[]) => obj.fetch(...args)
-        : prop in obj
-        ? obj[prop as keyof DurableObjectStub]
-        : (...args: any[]) => stubFetch(obj, prop, args),
-    })
+      get: (_, prop: string) => prop === 'fetch'
+        ? stub.fetch
+        : prop in stub
+        ? stub[prop as keyof DurableObjectStub]
+        : (stub[prop] = (...args: any[]) => stubFetch(stub, prop, args)),
+    }) as DurableAPIStub<T>;
   };
-  return namespace;
 }
 
 async function stubFetch(obj: DurableObjectStub, prop: string, content: any, retries = 0) {
@@ -179,9 +192,5 @@ async function transformResponse(response: Response) {
 
 function shouldRetry(err: any, retries: number) {
   if (retries > maxRetries) return false;
-  err = err + '';
-  if (err.includes('Network connection lost.')) return true;
-  if (err.includes('Cannot resolve Durable Object due to transient issue on remote node.')) return true;
-  if (err.includes('Durable Object reset because its code was updated.')) return true;
-  return false;
+  return retryOn.test(err + '');
 }

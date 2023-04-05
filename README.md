@@ -1,10 +1,10 @@
 # durable-apis
 
-Simplifies usage of [Cloudflare Durable Objects](https://blog.cloudflare.com/introducing-workers-durable-objects/), allowing a **functional programming style** *or* **class style**, **lightweight object definitions**, and **direct access** to object methods from within Workers (no need for request building/handling). Heavily influenced by and loosely forked from https://github.com/kwhitley/itty-durable/.
+Simplifies usage of [Cloudflare Durable Objects](https://blog.cloudflare.com/introducing-workers-durable-objects/), allowing a **functional programming style** *or* **class style**, **lightweight object definitions**, and **direct access** to object methods from within Workers (no need for request building/handling). Heavily influenced by and loosely forked from https://github.com/kwhitley/itty-durable/ but smaller, more focused, and with TypeScript support.
 
 ## Features
-- Removes nearly all boilerplate from writing **and** using Durable Objects
-- Exposes only desired APIs to be called from outside
+- Removes nearly all boilerplate from using Durable Objects
+- Exposes APIs to be called from Workers
 - First class Typescript support
 - Allows a functional programming style in addition to the object oriented style of Durable Objects
 - Extends existing APIs rather than replacing them
@@ -23,7 +23,7 @@ export interface Env {
 }
 ```
 
-##### Counter.ts (your Durable Object function)
+##### Counter.ts (your Durable Object definition, functional style)
 ```ts
 import { createDurable } from 'durable-apis'
 import { Env } from './types'
@@ -75,7 +75,37 @@ export const Counter = createDurable(({ blockConcurrencyWhile, storage }: Durabl
 ```
 
 ##### Worker.js (your CF Worker function)
-```js
+```ts
+import { getDurable } from 'durable-apis'
+import { Env } from './types'
+
+export default {
+  async fetch(request: Request, env: Env) {
+    const Counter = getDurable(env.Counter, 'test');
+    const path = new URL(request.url).pathname;
+    let count = 0;
+
+    if (path === '/') {
+      count = await Counter.get();
+    } if (path === '/increment') {
+      count = await Counter.increment();
+    } else if (/^\/add\/\d+\/\d+$/.test(path)) {
+      // expects /add/83/12
+      const parts = path.split('/');
+      const a = parseInt(parts[2]) || 0;
+      const b = parseInt(parts[3]) || 0;
+      count = await Counter.add(a, b);
+    } else  else {
+      return new Response('Not Found', { status: 404 });
+    }
+
+    return new Response(JSON.stringify({ count }), { headers: { 'Content-Type': 'application/json' } });
+  }
+}
+```
+
+##### Worker.js (your CF Worker function with router)
+```ts
 import { ThrowableRouter, missing, StatusError } from 'itty-router-extras'
 import { withDurables } from 'durable-apis'
 import { Env } from './types'
