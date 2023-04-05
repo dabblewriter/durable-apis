@@ -13,6 +13,7 @@ const retryOn = new RegExp([
   'Network connection lost',
   'Cannot resolve Durable Object due to transient issue on remote node',
   'Durable Object reset because its code was updated',
+  'The Durable Object\'s code has been updated',
 ].join('|'));
 
 export type Object = Record<string, any>;
