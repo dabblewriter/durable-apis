@@ -1,6 +1,6 @@
 {
   "name": "durable-apis",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Functional-style Cloudflare Durable Objects with direct API calls from Cloudflare Workers and TypeScript support.",
   "main": "dist/durable-apis.js",
   "types": "dist/durable-apis.d.ts",
