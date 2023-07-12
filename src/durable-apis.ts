@@ -192,8 +192,9 @@ function createResponse(data: any) {
 
 async function transformResponse(response: Response) {
   if (response.headers.get('X-Direct-Response') === 'true') {
-    response = response.clone();
-    response.headers.delete('X-Direct-Response');
+    const headers = new Headers(response.headers);
+    headers.delete('X-Direct-Response');
+    response = new Response(response.body, { ...response, headers });
     return response;
   }
   try {
