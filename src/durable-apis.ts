@@ -1,8 +1,8 @@
-import { IRequest, Router } from 'itty-router';
+import { IRequest, Router, RouterType } from 'itty-router';
 import {
+  StatusError,
   error,
   json,
-  StatusError,
   withContent,
 } from 'itty-router-extras';
 
@@ -103,6 +103,56 @@ export function createDurable<Env = EmptyObj, T extends Object = Object>(durable
         ? router.handle(request).catch(err => error(err.status || 500, err.message))
         : api.fetch?.(request) || error(500, 'Durable Object cannot handle request')
     }
+  }
+}
+
+export class DurableAPI<Env = EmptyObj> implements DurableObject {
+  private durableAPIRouter: RouterType;
+
+  constructor(protected state: DurableObjectState, protected env: Env) {
+    extendEnv(env);
+
+    this.durableAPIRouter = Router().post('/:prop', withContent as any, async (request: IRequest) => {
+      const { prop } = request.params;
+      const { content } = request;
+
+      if (typeof this[prop] !== 'function') {
+        throw new StatusError(500, `Durable Object does not contain method ${prop as string}()`)
+      }
+
+      const response = await (prop === 'fetch'
+        ? this.handleFetch(request as unknown as Request)
+        : this[prop](...content));
+
+      if (response instanceof Response) {
+        response.headers.set('X-Direct-Response', 'true');
+        return response;
+      }
+
+      return createResponse(response);
+    });
+  }
+
+  /**
+   * Handles the fetch event for the Durable Object. This method is called by the Durable Object runtime.
+   * This method is intended to be final and should not be overridden. Use handleFetch instead.
+   */
+  fetch(request: Request) {
+    if (request.url.startsWith(URL)) {
+      return this.durableAPIRouter.handle(request).catch(err => error(err.status || 500, err.message))
+    }
+    return this.handleFetch(request);
+  }
+
+  /**
+   * Handles the fetch event for the Durable Object when a subclass needs to accept websockets or handle requests
+   * explicitly that are not from a DurableAPI call.
+   */
+  handleFetch?(request: Request): Response | Promise<Response> {
+    return new Response(
+      `{"status":500,"error":"Durable Object cannot handle request"}`,
+      {status: 500, headers: {'Content-Type': 'application/json'}}
+    );
   }
 }
 

@@ -159,20 +159,17 @@ GET /counter/add/20/3                       => 23
 
 ##### Alternative class-style Counter.ts (your Durable Object Class)
 ```ts
-import { createDurable } from 'durable-apis'
+import { DurableAPI } from 'durable-apis'
 import { Env } from './types'
 
 // If you prefer the Class style, use a class like you normally would, wrapping it in our durable handler.
 // Note: all class methods are callable remotely using this method.
-export const Counter = createDurable(class Counter {
-  state: DurableObjectState
-  env: Env
+export class Counter extends DurableAPI<Env> {
   counter: number
   connections: Set<WebSocket>
 
-  constructor(state: DurableObjectState, env: Env): CounterAPI => {
-    this.state = state
-    this.env = env
+  constructor(state: DurableObjectState, env: Env): CounterAPI {
+    super(state, env)
     this.counter = 0
     this.connections = new Set()
     state.blockConcurrencyWhile(async () => counter = (await state.storage.get('data')) || 0)
@@ -196,7 +193,7 @@ export const Counter = createDurable(class Counter {
 
   // OPTIONAL: Handle any requests not handled by the API (avoid naming this `fetch` so we can still use the global
   // `fetch` method in our durable)
-  fetch(request: Request) {
+  handleFetch(request: Request) {
     if (request.headers.get('Upgrade') === 'websocket') {
       const [ client, server ] = Object.values(new WebSocketPair())
       server.accept()
@@ -211,7 +208,7 @@ export const Counter = createDurable(class Counter {
     }
     return new Response(null)
   }
-})
+}
 ```
 
 ## How it Works
@@ -229,8 +226,11 @@ npm install durable-apis
 
 # API
 
+### `DurableAPI<Env>`
+Super class to create DurableAPIs. It creates a router and handles the `fetch` method for calling methods on the class. It stores the `state` and `env` property on it and updates `env` with `extendEnv` to extends DurableObject stubs to support calling methods remotely.
+
 ### `createDurable((state: DurableObjectState, env: Env)): Function`
-Factory function to create the DurableApi function that wraps your API.
+Factory function to create the DurableAPI function that wraps your API.
 
 *Note:* if you're confused at how a function can replace a class, it is a simple quirk with how JavaScript treats classes. If something is returned from the constructor of a class, it is returned in the `new Class()` assignment. This means for a function `myFunc()` that returns a value, the two statements `obj = myFunc()` and `obj = new myFunc()` are equal.
 
